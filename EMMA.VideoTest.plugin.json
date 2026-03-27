@@ -1,7 +1,7 @@
 {
   "id": "emma.video.test",
   "name": "EMMA Video Test Plugin",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Deterministic video test plugin for stream list and segment retrieval validation.",
   "author": "projectemma",
   "protocol": "grpc",
