@@ -7,8 +7,9 @@ using Microsoft.Extensions.DependencyInjection;
 #else
 using EMMA.Plugin.Common;
 using EMMA.TestPlugin.Infrastructure;
-using System.Text.Json;
 using System.Diagnostics;
+using System.IO;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 #endif
 
@@ -64,40 +65,13 @@ public static partial class Program
 
 #else
     private static readonly WasmMangadexClient Mangadex = new();
+    private const string DefaultSingleHlsUri = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4";
+    private const string DefaultMulti1080pUri = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4";
+    private const string DefaultMulti720pUri = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4";
+    private const string DefaultMulti480pUri = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4";
+    private const string DefaultSegmentBasicUri = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4";
     private static readonly IReadOnlyDictionary<string, IReadOnlyList<VideoStreamOperationItem>> WasmStreamsByMediaId =
-        new Dictionary<string, IReadOnlyList<VideoStreamOperationItem>>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["video-hls-single"] =
-            [
-                new VideoStreamOperationItem(
-                    id: "single-main",
-                    label: "Main",
-                    playlistUri: "https://example.invalid/video-hls-single/master.m3u8")
-            ],
-            ["video-hls-multi"] =
-            [
-                new VideoStreamOperationItem(
-                    id: "multi-1080p",
-                    label: "1080p",
-                    playlistUri: "https://example.invalid/video-hls-multi/1080p.m3u8"),
-                new VideoStreamOperationItem(
-                    id: "multi-720p",
-                    label: "720p",
-                    playlistUri: "https://example.invalid/video-hls-multi/720p.m3u8"),
-                new VideoStreamOperationItem(
-                    id: "multi-480p",
-                    label: "480p",
-                    playlistUri: "https://example.invalid/video-hls-multi/480p.m3u8")
-            ],
-            ["video-segment-basic"] =
-            [
-                new VideoStreamOperationItem(
-                    id: "segment-main",
-                    label: "Segment Main",
-                    playlistUri: "https://example.invalid/video-segment-basic/master.m3u8")
-            ],
-            ["video-empty-streams"] = []
-        };
+        BuildWasmStreamsByMediaId();
 
     public static void Main(string[] args)
     {
@@ -593,6 +567,94 @@ public static partial class Program
     {
         return PluginEnvironmentFlags.IsEnabled(Environment.GetEnvironmentVariable("EMMA_PLUGIN_TIMING_DIAGNOSTICS"))
             || PluginEnvironmentFlags.IsEnabled(Environment.GetEnvironmentVariable("EMMA_WASM_PAYLOAD_DIAGNOSTICS"));
+    }
+
+    private static IReadOnlyDictionary<string, IReadOnlyList<VideoStreamOperationItem>> BuildWasmStreamsByMediaId()
+    {
+        var singleUri = GetEnvOrDefault("EMMA_VIDEO_TEST_HLS_SINGLE_URI", DefaultSingleHlsUri);
+        var multi1080Uri = GetEnvOrDefault("EMMA_VIDEO_TEST_HLS_1080_URI", DefaultMulti1080pUri);
+        var multi720Uri = GetEnvOrDefault("EMMA_VIDEO_TEST_HLS_720_URI", DefaultMulti720pUri);
+        var multi480Uri = GetEnvOrDefault("EMMA_VIDEO_TEST_HLS_480_URI", DefaultMulti480pUri);
+        var segmentUri = GetEnvOrDefault("EMMA_VIDEO_TEST_SEGMENT_URI", DefaultSegmentBasicUri);
+        var localFileUri = ResolveLocalFileUri(Environment.GetEnvironmentVariable("EMMA_VIDEO_TEST_LOCAL_FILE_PATH"));
+
+        return new Dictionary<string, IReadOnlyList<VideoStreamOperationItem>>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["video-hls-single"] =
+            [
+                new VideoStreamOperationItem(
+                    id: "single-main",
+                    label: "Main",
+                    playlistUri: singleUri)
+            ],
+            ["video-hls-multi"] =
+            [
+                new VideoStreamOperationItem(
+                    id: "multi-1080p",
+                    label: "1080p",
+                    playlistUri: multi1080Uri),
+                new VideoStreamOperationItem(
+                    id: "multi-720p",
+                    label: "720p",
+                    playlistUri: multi720Uri),
+                new VideoStreamOperationItem(
+                    id: "multi-480p",
+                    label: "480p",
+                    playlistUri: multi480Uri)
+            ],
+            ["video-segment-basic"] =
+            [
+                new VideoStreamOperationItem(
+                    id: "segment-main",
+                    label: "Segment Main",
+                    playlistUri: segmentUri)
+            ],
+            ["video-empty-streams"] = [],
+            ["video-local-file"] = BuildLocalFileStreams(localFileUri)
+        };
+    }
+
+    private static IReadOnlyList<VideoStreamOperationItem> BuildLocalFileStreams(string? localFileUri)
+    {
+        if (string.IsNullOrWhiteSpace(localFileUri))
+        {
+            return [];
+        }
+
+        return
+        [
+            new VideoStreamOperationItem(
+                id: "local-file-main",
+                label: "Local File",
+                playlistUri: localFileUri)
+        ];
+    }
+
+    private static string GetEnvOrDefault(string name, string fallback)
+    {
+        var value = Environment.GetEnvironmentVariable(name);
+        return string.IsNullOrWhiteSpace(value) ? fallback : value.Trim();
+    }
+
+    private static string? ResolveLocalFileUri(string? configuredPath)
+    {
+        if (string.IsNullOrWhiteSpace(configuredPath))
+        {
+            return null;
+        }
+
+        var trimmed = configuredPath.Trim();
+        if (!Path.IsPathRooted(trimmed))
+        {
+            trimmed = Path.GetFullPath(trimmed);
+        }
+
+        if (!File.Exists(trimmed))
+        {
+            return null;
+        }
+
+        return new Uri(trimmed).AbsoluteUri;
     }
 
     [JsonSerializable(typeof(HandshakeResponse))]

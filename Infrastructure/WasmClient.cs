@@ -34,7 +34,14 @@ internal sealed partial class WasmMangadexClient
 			title: "Video Test - Empty Streams",
 			mediaType: "video",
 			thumbnailUrl: "https://example.invalid/posters/video-empty-streams.jpg",
-			description: "Scenario E: stream list intentionally empty.")
+			description: "Scenario E: stream list intentionally empty."),
+		new SearchItem(
+			id: "video-local-file",
+			source: "emma.video.test",
+			title: "Video Test - Local File",
+			mediaType: "video",
+			thumbnailUrl: "https://example.invalid/posters/video-local-file.jpg",
+			description: "Optional local file stream from EMMA_VIDEO_TEST_LOCAL_FILE_PATH.")
 	];
 
 	public SearchParseMapResult SearchFromPayloadWithTimings(string query, string payloadJson)

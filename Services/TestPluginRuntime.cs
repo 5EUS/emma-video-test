@@ -1,6 +1,7 @@
 using EMMA.Contracts.Plugins;
 using Google.Protobuf;
 using Microsoft.Extensions.Logging;
+using System.IO;
 
 namespace EMMA.TestPlugin.Services;
 
@@ -9,6 +10,11 @@ public sealed class TestPluginRuntime(
 {
     private const string SourceId = "emma.video.test";
     private const string MediaTypeVideo = "video";
+    private const string DefaultSingleHlsUri = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4";
+    private const string DefaultMulti1080pUri = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4";
+    private const string DefaultMulti720pUri = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4";
+    private const string DefaultMulti480pUri = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4";
+    private const string DefaultSegmentBasicUri = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4";
 
     private static readonly IReadOnlyList<MediaSummary> VideoFixtures =
     [
@@ -47,53 +53,20 @@ public sealed class TestPluginRuntime(
             MediaType = MediaTypeVideo,
             ThumbnailUrl = "https://example.invalid/posters/video-empty-streams.jpg",
             Description = "Scenario E: stream list intentionally empty."
+        },
+        new MediaSummary
+        {
+            Id = "video-local-file",
+            Source = SourceId,
+            Title = "Video Test - Local File",
+            MediaType = MediaTypeVideo,
+            ThumbnailUrl = "https://example.invalid/posters/video-local-file.jpg",
+            Description = "Optional local file stream from EMMA_VIDEO_TEST_LOCAL_FILE_PATH."
         }
     ];
 
     private static readonly IReadOnlyDictionary<string, IReadOnlyList<StreamInfo>> StreamsByMediaId =
-        new Dictionary<string, IReadOnlyList<StreamInfo>>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["video-hls-single"] =
-            [
-                new StreamInfo
-                {
-                    Id = "single-main",
-                    Label = "Main",
-                    PlaylistUri = "https://example.invalid/video-hls-single/master.m3u8"
-                }
-            ],
-            ["video-hls-multi"] =
-            [
-                new StreamInfo
-                {
-                    Id = "multi-1080p",
-                    Label = "1080p",
-                    PlaylistUri = "https://example.invalid/video-hls-multi/1080p.m3u8"
-                },
-                new StreamInfo
-                {
-                    Id = "multi-720p",
-                    Label = "720p",
-                    PlaylistUri = "https://example.invalid/video-hls-multi/720p.m3u8"
-                },
-                new StreamInfo
-                {
-                    Id = "multi-480p",
-                    Label = "480p",
-                    PlaylistUri = "https://example.invalid/video-hls-multi/480p.m3u8"
-                }
-            ],
-            ["video-segment-basic"] =
-            [
-                new StreamInfo
-                {
-                    Id = "segment-main",
-                    Label = "Segment Main",
-                    PlaylistUri = "https://example.invalid/video-segment-basic/master.m3u8"
-                }
-            ],
-            ["video-empty-streams"] = []
-        };
+        BuildStreamsByMediaId();
 
     private readonly ILogger<TestPluginRuntime> _logger = logger;
 
@@ -186,5 +159,110 @@ public sealed class TestPluginRuntime(
             sequence);
 
         return Task.FromResult(new SegmentResponse());
+    }
+
+    private static IReadOnlyDictionary<string, IReadOnlyList<StreamInfo>> BuildStreamsByMediaId()
+    {
+        var singleUri = GetEnvOrDefault("EMMA_VIDEO_TEST_HLS_SINGLE_URI", DefaultSingleHlsUri);
+        var multi1080Uri = GetEnvOrDefault("EMMA_VIDEO_TEST_HLS_1080_URI", DefaultMulti1080pUri);
+        var multi720Uri = GetEnvOrDefault("EMMA_VIDEO_TEST_HLS_720_URI", DefaultMulti720pUri);
+        var multi480Uri = GetEnvOrDefault("EMMA_VIDEO_TEST_HLS_480_URI", DefaultMulti480pUri);
+        var segmentUri = GetEnvOrDefault("EMMA_VIDEO_TEST_SEGMENT_URI", DefaultSegmentBasicUri);
+        var localFileUri = ResolveLocalFileUri(Environment.GetEnvironmentVariable("EMMA_VIDEO_TEST_LOCAL_FILE_PATH"));
+
+        return new Dictionary<string, IReadOnlyList<StreamInfo>>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["video-hls-single"] =
+            [
+                new StreamInfo
+                {
+                    Id = "single-main",
+                    Label = "Main",
+                    PlaylistUri = singleUri
+                }
+            ],
+            ["video-hls-multi"] =
+            [
+                new StreamInfo
+                {
+                    Id = "multi-1080p",
+                    Label = "1080p",
+                    PlaylistUri = multi1080Uri
+                },
+                new StreamInfo
+                {
+                    Id = "multi-720p",
+                    Label = "720p",
+                    PlaylistUri = multi720Uri
+                },
+                new StreamInfo
+                {
+                    Id = "multi-480p",
+                    Label = "480p",
+                    PlaylistUri = multi480Uri
+                }
+            ],
+            ["video-segment-basic"] =
+            [
+                new StreamInfo
+                {
+                    Id = "segment-main",
+                    Label = "Segment Main",
+                    PlaylistUri = segmentUri
+                }
+            ],
+            ["video-empty-streams"] = [],
+            ["video-local-file"] = BuildLocalFileStreams(localFileUri)
+        };
+    }
+
+    private static IReadOnlyList<StreamInfo> BuildLocalFileStreams(string? localFileUri)
+    {
+        if (string.IsNullOrWhiteSpace(localFileUri))
+        {
+            return [];
+        }
+
+        return
+        [
+            new StreamInfo
+            {
+                Id = "local-file-main",
+                Label = "Local File",
+                PlaylistUri = localFileUri
+            }
+        ];
+    }
+
+    private static string GetEnvOrDefault(string name, string fallback)
+    {
+        var value = Environment.GetEnvironmentVariable(name);
+        if (!string.IsNullOrWhiteSpace(value))
+        {
+            return value.Trim();
+        }
+
+        return fallback;
+    }
+
+    private static string? ResolveLocalFileUri(string? configuredPath)
+    {
+        if (string.IsNullOrWhiteSpace(configuredPath))
+        {
+            return null;
+        }
+
+        var trimmed = configuredPath.Trim();
+        if (!Path.IsPathRooted(trimmed))
+        {
+            trimmed = Path.GetFullPath(trimmed);
+        }
+
+        if (!File.Exists(trimmed))
+        {
+            return null;
+        }
+
+        return new Uri(trimmed).AbsoluteUri;
     }
 }

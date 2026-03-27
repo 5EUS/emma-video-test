@@ -67,3 +67,29 @@ Segment behavior for `video-segment-basic` + `segment-main`:
 
 - Plugin behavior is synthetic and does not depend on external providers.
 - Page/chapter endpoints are intentionally stubbed in this project because this plugin focuses on video path validation.
+
+## Real stream defaults
+
+This plugin now ships with real public HLS defaults for these fixtures:
+
+- video-hls-single
+- video-hls-multi
+- video-segment-basic
+
+You can override them with environment variables:
+
+- EMMA_VIDEO_TEST_HLS_SINGLE_URI
+- EMMA_VIDEO_TEST_HLS_1080_URI
+- EMMA_VIDEO_TEST_HLS_720_URI
+- EMMA_VIDEO_TEST_HLS_480_URI
+- EMMA_VIDEO_TEST_SEGMENT_URI
+
+## Local filesystem video
+
+Set EMMA_VIDEO_TEST_LOCAL_FILE_PATH to an absolute file path and the fixture video-local-file will expose one stream using a file URI.
+
+Example:
+
+EMMA_VIDEO_TEST_LOCAL_FILE_PATH=/home/you/Videos/sample.mp4 dotnet run --project EMMA.VideoTest.csproj
+
+If the file path is missing or does not exist, video-local-file returns an empty stream list.
