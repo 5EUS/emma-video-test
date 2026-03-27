@@ -8,6 +8,20 @@ internal sealed partial class WasmMangadexClient
 	private static readonly SearchItem[] Fixtures =
 	[
 		new SearchItem(
+			id: "video-movie-nightfall",
+			source: "emma.video.test",
+			title: "Video Test - Movie Nightfall",
+			mediaType: "video",
+			thumbnailUrl: "https://example.invalid/posters/video-movie-nightfall.jpg",
+			description: "Single-video movie style item."),
+		new SearchItem(
+			id: "video-series-space-odyssey",
+			source: "emma.video.test",
+			title: "Video Test - Space Odyssey",
+			mediaType: "video",
+			thumbnailUrl: "https://example.invalid/posters/video-series-space-odyssey.jpg",
+			description: "Series detail sample with 2 seasons and 6 episodes."),
+		new SearchItem(
 			id: "video-hls-single",
 			source: "emma.video.test",
 			title: "Video Test - HLS Single Stream",

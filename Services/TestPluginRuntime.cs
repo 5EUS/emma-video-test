@@ -15,9 +15,35 @@ public sealed class TestPluginRuntime(
     private const string DefaultMulti720pUri = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4";
     private const string DefaultMulti480pUri = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4";
     private const string DefaultSegmentBasicUri = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4";
+    private const string VideoSeriesCollectionId = "video-series-space-odyssey";
+    private const string VideoSeriesCollectionLegacyId = "video-series-space-oddessy";
+    private const string VideoSeason1Episode1Id = "video-series-space-odyssey-s1e1";
+    private const string VideoSeason1Episode2Id = "video-series-space-odyssey-s1e2";
+    private const string VideoSeason1Episode3Id = "video-series-space-odyssey-s1e3";
+    private const string VideoSeason2Episode1Id = "video-series-space-odyssey-s2e1";
+    private const string VideoSeason2Episode2Id = "video-series-space-odyssey-s2e2";
+    private const string VideoSeason2Episode3Id = "video-series-space-odyssey-s2e3";
 
     private static readonly IReadOnlyList<MediaSummary> VideoFixtures =
     [
+        new MediaSummary
+        {
+            Id = "video-movie-nightfall",
+            Source = SourceId,
+            Title = "Video Test - Movie Nightfall",
+            MediaType = MediaTypeVideo,
+            ThumbnailUrl = "https://example.invalid/posters/video-movie-nightfall.jpg",
+            Description = "Single-video movie style item."
+        },
+        new MediaSummary
+        {
+            Id = VideoSeriesCollectionId,
+            Source = SourceId,
+            Title = "Video Test - Space Odyssey",
+            MediaType = MediaTypeVideo,
+            ThumbnailUrl = "https://example.invalid/posters/video-series-space-odyssey.jpg",
+            Description = "Series detail sample with 2 seasons and 6 episodes."
+        },
         new MediaSummary
         {
             Id = "video-hls-single",
@@ -67,6 +93,8 @@ public sealed class TestPluginRuntime(
 
     private static readonly IReadOnlyDictionary<string, IReadOnlyList<StreamInfo>> StreamsByMediaId =
         BuildStreamsByMediaId();
+    private static readonly IReadOnlyDictionary<string, IReadOnlyList<MediaChapter>> ChaptersByMediaId =
+        BuildChaptersByMediaId();
 
     private readonly ILogger<TestPluginRuntime> _logger = logger;
 
@@ -97,6 +125,11 @@ public sealed class TestPluginRuntime(
     public Task<IReadOnlyList<MediaChapter>> GetChaptersAsync(string mediaId, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        if (ChaptersByMediaId.TryGetValue(mediaId, out var chapters))
+        {
+            return Task.FromResult(chapters);
+        }
+
         return Task.FromResult<IReadOnlyList<MediaChapter>>([]);
     }
 
@@ -181,6 +214,15 @@ public sealed class TestPluginRuntime(
                     PlaylistUri = singleUri
                 }
             ],
+            ["video-movie-nightfall"] =
+            [
+                new StreamInfo
+                {
+                    Id = "movie-main",
+                    Label = "Movie",
+                    PlaylistUri = singleUri
+                }
+            ],
             ["video-hls-multi"] =
             [
                 new StreamInfo
@@ -211,8 +253,87 @@ public sealed class TestPluginRuntime(
                     PlaylistUri = segmentUri
                 }
             ],
+            [VideoSeason1Episode1Id] =
+            [
+                new StreamInfo
+                {
+                    Id = "s1e1-main",
+                    Label = "1080p",
+                    PlaylistUri = singleUri
+                }
+            ],
+            [VideoSeason1Episode2Id] =
+            [
+                new StreamInfo
+                {
+                    Id = "s1e2-main",
+                    Label = "1080p",
+                    PlaylistUri = multi1080Uri
+                }
+            ],
+            [VideoSeason1Episode3Id] =
+            [
+                new StreamInfo
+                {
+                    Id = "s1e3-main",
+                    Label = "720p",
+                    PlaylistUri = multi720Uri
+                }
+            ],
+            [VideoSeason2Episode1Id] =
+            [
+                new StreamInfo
+                {
+                    Id = "s2e1-main",
+                    Label = "1080p",
+                    PlaylistUri = multi1080Uri
+                }
+            ],
+            [VideoSeason2Episode2Id] =
+            [
+                new StreamInfo
+                {
+                    Id = "s2e2-main",
+                    Label = "720p",
+                    PlaylistUri = multi720Uri
+                }
+            ],
+            [VideoSeason2Episode3Id] =
+            [
+                new StreamInfo
+                {
+                    Id = "s2e3-main",
+                    Label = "480p",
+                    PlaylistUri = multi480Uri
+                }
+            ],
             ["video-empty-streams"] = [],
             ["video-local-file"] = BuildLocalFileStreams(localFileUri)
+        };
+    }
+
+    private static IReadOnlyDictionary<string, IReadOnlyList<MediaChapter>> BuildChaptersByMediaId()
+    {
+        return new Dictionary<string, IReadOnlyList<MediaChapter>>(StringComparer.OrdinalIgnoreCase)
+        {
+            [VideoSeriesCollectionId] =
+            [
+                new MediaChapter { Id = VideoSeason1Episode1Id, Number = 1, Title = "S1E1 - Lift Off" },
+                new MediaChapter { Id = VideoSeason1Episode2Id, Number = 2, Title = "S1E2 - First Contact" },
+                new MediaChapter { Id = VideoSeason1Episode3Id, Number = 3, Title = "S1E3 - Orbitfall" },
+                new MediaChapter { Id = VideoSeason2Episode1Id, Number = 4, Title = "S2E1 - Signal Lost" },
+                new MediaChapter { Id = VideoSeason2Episode2Id, Number = 5, Title = "S2E2 - Deep Relay" },
+                new MediaChapter { Id = VideoSeason2Episode3Id, Number = 6, Title = "S2E3 - Home Vector" }
+            ],
+            [VideoSeriesCollectionLegacyId] =
+            [
+                new MediaChapter { Id = VideoSeason1Episode1Id, Number = 1, Title = "S1E1 - Lift Off" },
+                new MediaChapter { Id = VideoSeason1Episode2Id, Number = 2, Title = "S1E2 - First Contact" },
+                new MediaChapter { Id = VideoSeason1Episode3Id, Number = 3, Title = "S1E3 - Orbitfall" },
+                new MediaChapter { Id = VideoSeason2Episode1Id, Number = 4, Title = "S2E1 - Signal Lost" },
+                new MediaChapter { Id = VideoSeason2Episode2Id, Number = 5, Title = "S2E2 - Deep Relay" },
+                new MediaChapter { Id = VideoSeason2Episode3Id, Number = 6, Title = "S2E3 - Home Vector" }
+            ]
         };
     }
 

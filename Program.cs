@@ -70,8 +70,18 @@ public static partial class Program
     private const string DefaultMulti720pUri = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4";
     private const string DefaultMulti480pUri = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4";
     private const string DefaultSegmentBasicUri = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4";
+    private const string VideoSeriesCollectionId = "video-series-space-odyssey";
+    private const string VideoSeriesCollectionLegacyId = "video-series-space-oddessy";
+    private const string VideoSeason1Episode1Id = "video-series-space-odyssey-s1e1";
+    private const string VideoSeason1Episode2Id = "video-series-space-odyssey-s1e2";
+    private const string VideoSeason1Episode3Id = "video-series-space-odyssey-s1e3";
+    private const string VideoSeason2Episode1Id = "video-series-space-odyssey-s2e1";
+    private const string VideoSeason2Episode2Id = "video-series-space-odyssey-s2e2";
+    private const string VideoSeason2Episode3Id = "video-series-space-odyssey-s2e3";
     private static readonly IReadOnlyDictionary<string, IReadOnlyList<VideoStreamOperationItem>> WasmStreamsByMediaId =
         BuildWasmStreamsByMediaId();
+    private static readonly IReadOnlyDictionary<string, IReadOnlyList<ChapterItem>> VideoEpisodesByCollectionId =
+        BuildVideoEpisodesByCollectionId();
 
     public static void Main(string[] args)
     {
@@ -218,6 +228,11 @@ public static partial class Program
             return [];
         }
 
+        if (VideoEpisodesByCollectionId.TryGetValue(mediaId, out var episodes))
+        {
+            return [.. episodes];
+        }
+
         if (string.IsNullOrWhiteSpace(payloadJson))
         {
             payloadJson = Mangadex.FetchChaptersPayload(mediaId) ?? string.Empty;
@@ -330,7 +345,9 @@ public static partial class Program
                     JsonSerializer.Serialize(
                         search(searchArgs.Query, payloadJson),
                         TestPluginWasmJsonContext.Default.SearchItemArray)),
-                "chapters" when string.Equals(mediaType, "paged", StringComparison.OrdinalIgnoreCase) || string.IsNullOrWhiteSpace(mediaType) => BuildOperationJsonResult(
+                "chapters" when string.Equals(mediaType, "paged", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(mediaType, "video", StringComparison.OrdinalIgnoreCase)
+                    || string.IsNullOrWhiteSpace(mediaType) => BuildOperationJsonResult(
                     JsonSerializer.Serialize(
                         chapters(request.mediaId ?? PluginJsonArgs.GetString(request.argsJson, "mediaId"), payloadJson),
                         TestPluginWasmJsonContext.Default.ChapterItemArray)),
@@ -587,6 +604,13 @@ public static partial class Program
                     label: "Main",
                     playlistUri: singleUri)
             ],
+            ["video-movie-nightfall"] =
+            [
+                new VideoStreamOperationItem(
+                    id: "movie-main",
+                    label: "Movie",
+                    playlistUri: singleUri)
+            ],
             ["video-hls-multi"] =
             [
                 new VideoStreamOperationItem(
@@ -609,8 +633,75 @@ public static partial class Program
                     label: "Segment Main",
                     playlistUri: segmentUri)
             ],
+            [VideoSeason1Episode1Id] =
+            [
+                new VideoStreamOperationItem(
+                    id: "s1e1-main",
+                    label: "1080p",
+                    playlistUri: singleUri)
+            ],
+            [VideoSeason1Episode2Id] =
+            [
+                new VideoStreamOperationItem(
+                    id: "s1e2-main",
+                    label: "1080p",
+                    playlistUri: multi1080Uri)
+            ],
+            [VideoSeason1Episode3Id] =
+            [
+                new VideoStreamOperationItem(
+                    id: "s1e3-main",
+                    label: "720p",
+                    playlistUri: multi720Uri)
+            ],
+            [VideoSeason2Episode1Id] =
+            [
+                new VideoStreamOperationItem(
+                    id: "s2e1-main",
+                    label: "1080p",
+                    playlistUri: multi1080Uri)
+            ],
+            [VideoSeason2Episode2Id] =
+            [
+                new VideoStreamOperationItem(
+                    id: "s2e2-main",
+                    label: "720p",
+                    playlistUri: multi720Uri)
+            ],
+            [VideoSeason2Episode3Id] =
+            [
+                new VideoStreamOperationItem(
+                    id: "s2e3-main",
+                    label: "480p",
+                    playlistUri: multi480Uri)
+            ],
             ["video-empty-streams"] = [],
             ["video-local-file"] = BuildLocalFileStreams(localFileUri)
+        };
+    }
+
+    private static IReadOnlyDictionary<string, IReadOnlyList<ChapterItem>> BuildVideoEpisodesByCollectionId()
+    {
+        return new Dictionary<string, IReadOnlyList<ChapterItem>>(StringComparer.OrdinalIgnoreCase)
+        {
+            [VideoSeriesCollectionId] =
+            [
+                new ChapterItem(id: VideoSeason1Episode1Id, number: 1, title: "S1E1 - Lift Off"),
+                new ChapterItem(id: VideoSeason1Episode2Id, number: 2, title: "S1E2 - First Contact"),
+                new ChapterItem(id: VideoSeason1Episode3Id, number: 3, title: "S1E3 - Orbitfall"),
+                new ChapterItem(id: VideoSeason2Episode1Id, number: 4, title: "S2E1 - Signal Lost"),
+                new ChapterItem(id: VideoSeason2Episode2Id, number: 5, title: "S2E2 - Deep Relay"),
+                new ChapterItem(id: VideoSeason2Episode3Id, number: 6, title: "S2E3 - Home Vector")
+            ],
+            [VideoSeriesCollectionLegacyId] =
+            [
+                new ChapterItem(id: VideoSeason1Episode1Id, number: 1, title: "S1E1 - Lift Off"),
+                new ChapterItem(id: VideoSeason1Episode2Id, number: 2, title: "S1E2 - First Contact"),
+                new ChapterItem(id: VideoSeason1Episode3Id, number: 3, title: "S1E3 - Orbitfall"),
+                new ChapterItem(id: VideoSeason2Episode1Id, number: 4, title: "S2E1 - Signal Lost"),
+                new ChapterItem(id: VideoSeason2Episode2Id, number: 5, title: "S2E2 - Deep Relay"),
+                new ChapterItem(id: VideoSeason2Episode3Id, number: 6, title: "S2E3 - Home Vector")
+            ]
         };
     }
 
