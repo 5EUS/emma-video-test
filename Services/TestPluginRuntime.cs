@@ -166,10 +166,10 @@ public sealed class TestPluginRuntime(
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        if (string.Equals(mediaId, "video-segment-basic", StringComparison.OrdinalIgnoreCase)
-            && string.Equals(streamId, "segment-main", StringComparison.OrdinalIgnoreCase)
-            && sequence >= 0
-            && sequence <= 4)
+        if (sequence >= 0
+            && sequence <= 4
+            && StreamsByMediaId.TryGetValue(mediaId, out var streams)
+            && streams.Any(stream => string.Equals(stream.Id, streamId, StringComparison.OrdinalIgnoreCase)))
         {
             var payloadText = $"SEGMENT|media={mediaId}|stream={streamId}|seq={sequence}";
             return Task.FromResult(new SegmentResponse

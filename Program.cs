@@ -318,9 +318,13 @@ public static partial class Program
             return null;
         }
 
-        if (!string.Equals(mediaId, "video-segment-basic", StringComparison.OrdinalIgnoreCase)
-            || !string.Equals(streamId, "segment-main", StringComparison.OrdinalIgnoreCase)
-            || sequence > 4)
+        if (sequence > 4)
+        {
+            return null;
+        }
+
+        if (!WasmStreamsByMediaId.TryGetValue(mediaId, out var streams)
+            || !streams.Any(stream => string.Equals(stream.id, streamId, StringComparison.OrdinalIgnoreCase)))
         {
             return null;
         }
