@@ -48,7 +48,8 @@ public static partial class PluginImpl
         return [.. items.Select(item => new IPlugin.ChapterItem(
             item.id,
             checked((uint)item.number),
-            item.title))];
+            item.title,
+            [.. item.uploaderGroups ?? []]))];
     }
 
     public static IPlugin.PageItem? Page(string mediaId, string chapterId, uint pageIndex, string payloadJson)

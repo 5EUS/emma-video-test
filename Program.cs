@@ -349,8 +349,8 @@ public static partial class Program
                     || string.Equals(mediaType, "video", StringComparison.OrdinalIgnoreCase)
                     || string.IsNullOrWhiteSpace(mediaType) => BuildOperationJsonResult(
                     JsonSerializer.Serialize(
-                        chapters(request.mediaId ?? PluginJsonArgs.GetString(request.argsJson, "mediaId"), payloadJson),
-                        TestPluginWasmJsonContext.Default.ChapterItemArray)),
+                        BuildChapterOperationItems(request.mediaId ?? PluginJsonArgs.GetString(request.argsJson, "mediaId"), payloadJson),
+                        TestPluginWasmJsonContext.Default.WasmChapterOperationItemArray)),
                 "page" when string.Equals(mediaType, "paged", StringComparison.OrdinalIgnoreCase) || string.IsNullOrWhiteSpace(mediaType) => InvokeSinglePage(request, payloadJson),
                 "pages" when string.Equals(mediaType, "paged", StringComparison.OrdinalIgnoreCase) || string.IsNullOrWhiteSpace(mediaType) => InvokePages(request, payloadJson),
                 "video-streams" when string.Equals(mediaType, "video", StringComparison.OrdinalIgnoreCase) || string.IsNullOrWhiteSpace(mediaType) => InvokeVideoStreams(request, payloadJson),
@@ -361,12 +361,12 @@ public static partial class Program
                     BenchmarkNetwork(
                         [PluginJsonArgs.GetString(request.argsJson, "query")],
                         payloadJson)),
-                _ => OperationResult.Error($"unsupported-operation:{operation}")
+                _ => OperationResult.UnsupportedOperation(operation)
             };
         }
         catch (Exception ex)
         {
-            return OperationResult.Error($"failed:{ex.Message}");
+            return OperationResult.Failed(ex.Message);
         }
     }
 
@@ -418,7 +418,7 @@ public static partial class Program
         if (args.Length == 0)
         {
             return JsonSerializer.Serialize(
-                OperationResult.Error("invalid-arguments:missing operation"),
+                OperationResult.InvalidArguments("missing operation"),
                 TestPluginWasmJsonContext.Default.OperationResult);
         }
 
@@ -473,6 +473,48 @@ public static partial class Program
             ? "null"
             : JsonSerializer.Serialize(segment, TestPluginWasmJsonContext.Default.VideoSegmentOperationItem);
         return BuildOperationJsonResult(json);
+    }
+
+    private static IReadOnlyList<WasmChapterOperationItem> BuildChapterOperationItems(string mediaId, string payloadJson)
+    {
+        var chapterItems = chapters(mediaId, payloadJson);
+        if (chapterItems.Length == 0)
+        {
+            return [];
+        }
+
+        var result = new List<WasmChapterOperationItem>(chapterItems.Length);
+        foreach (var item in chapterItems)
+        {
+            result.Add(new WasmChapterOperationItem(
+                item.id,
+                item.number,
+                item.title,
+                ResolveUploaderGroups(item.id)));
+        }
+
+        return result;
+    }
+
+    private static string[] ResolveUploaderGroups(string chapterId)
+    {
+        if (string.IsNullOrWhiteSpace(chapterId))
+        {
+            return [];
+        }
+
+        var normalized = chapterId.Trim().ToLowerInvariant();
+        if (normalized.Contains("s1"))
+        {
+            return ["Orbit Subs"];
+        }
+
+        if (normalized.Contains("s2"))
+        {
+            return ["Nova Encode"];
+        }
+
+        return ["Studio Internal"];
     }
 
     private static OperationResult BuildOperationJsonResult(string payloadJson)
@@ -753,6 +795,7 @@ public static partial class Program
     [JsonSerializable(typeof(CapabilityItem[]))]
     [JsonSerializable(typeof(SearchItem[]))]
     [JsonSerializable(typeof(ChapterItem[]))]
+    [JsonSerializable(typeof(WasmChapterOperationItem[]))]
     [JsonSerializable(typeof(PageItem))]
     [JsonSerializable(typeof(PageItem[]))]
     [JsonSerializable(typeof(VideoStreamOperationItem[]))]
@@ -764,8 +807,11 @@ public static partial class Program
     {
     }
 
-    public sealed record VideoStreamOperationItem(string id, string label, string playlistUri);
+    private sealed record WasmChapterOperationItem(
+        string id,
+        int number,
+        string title,
+        string[] uploaderGroups);
 
-    public sealed record VideoSegmentOperationItem(string contentType, string payload);
 #endif
 }
