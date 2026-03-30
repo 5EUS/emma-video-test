@@ -3,7 +3,6 @@ using EMMA.Plugin.Common;
 using EMMA.Plugin.AspNetCore;
 using EMMA.PluginTemplate.Infrastructure;
 using EMMA.PluginTemplate.Services;
-using Microsoft.Extensions.DependencyInjection;
 #else
 using EMMA.Plugin.Common;
 using EMMA.PluginTemplate.Infrastructure;
@@ -17,8 +16,6 @@ namespace EMMA.PluginTemplate;
 public static partial class Program
 {
 #if PLUGIN_TRANSPORT_ASPNET
-    private static readonly ManifestDefaults ControlDefaults = ManifestDefaultsProvider.Load();
-
     public static void Main(string[] args)
     {
         var devMode = PluginEnvironment.IsDevelopmentMode();
@@ -31,15 +28,6 @@ public static partial class Program
             RootMessage: "EMMA plugin template is running.");
 
         PluginBuilder.Create(args, hostOptions)
-            .ConfigureServices(services =>
-            {
-                services.AddHttpClient<AspNetClient>(client =>
-                {
-                    client.BaseAddress = ProviderHttpProfile.BaseUri;
-                    client.DefaultRequestHeaders.UserAgent.ParseAdd(ProviderHttpProfile.UserAgent);
-                    client.DefaultRequestHeaders.Accept.ParseAdd(ProviderHttpProfile.AcceptMediaType);
-                });
-            })
             .UseDefaultControlService(ConfigureDefaultControlService)
                 .AddDefaultPagedProviders<AspNetClient>()
                 .AddDefaultVideoProvider<AspNetClient>()
@@ -52,70 +40,73 @@ public static partial class Program
     private static void ConfigureDefaultControlService(PluginSdkControlOptions options)
     {
         options.Message = "EMMA Video Test ready";
-        options.CpuBudgetMs = ControlDefaults.CpuBudgetMs;
-        options.MemoryMb = ControlDefaults.MemoryMb;
+        options.CpuBudgetMs = 200;
+        options.MemoryMb = 256;
         options.Capabilities.Add("plugin-template");
         options.Capabilities.Add("search");
         options.Capabilities.Add("pages");
         options.Capabilities.Add("video");
 
         options.Domains.Clear();
-        foreach (var domain in ControlDefaults.Domains)
-        {
-            options.Domains.Add(domain);
-        }
-
+        options.Domains.Add("commondatastorage.googleapis.com");
         options.Paths.Clear();
-        foreach (var path in ControlDefaults.Paths)
-        {
-            options.Paths.Add(path);
-        }
+        options.Paths.Add("/");
     }
 
 #else
-    private static readonly WasmPluginOperationHost OperationHost = new();
+    private static readonly WasmClient OperationClient = new();
 
     public static void Main(string[] args)
     {
         Environment.ExitCode = PluginWasmCliHost.Run(
             args,
             PluginOperationNames.WasmCliKnownOperations,
-            OperationHost.ExecuteOperationForCli);
+            OperationClient.ExecuteOperationForCli);
     }
 
     public static HandshakeResponse handshake()
     {
-        return OperationHost.Handshake();
+        return OperationClient.Handshake();
     }
 
     public static CapabilityItem[] capabilities()
     {
-        return OperationHost.Capabilities();
+        return OperationClient.Capabilities();
     }
 
     public static SearchItem[] search(string query, string payloadJson)
     {
-        return OperationHost.Search(query, payloadJson);
+        return OperationClient.Search(query, payloadJson);
     }
 
     public static ChapterItem[] chapters(string mediaId, string payloadJson)
     {
-        return OperationHost.Chapters(mediaId, payloadJson);
+        return OperationClient.Chapters(mediaId, payloadJson);
     }
 
     public static PageItem? page(string mediaId, string chapterId, uint pageIndex, string payloadJson)
     {
-        return OperationHost.Page(mediaId, chapterId, pageIndex, payloadJson);
+        return OperationClient.Page(mediaId, chapterId, pageIndex, payloadJson);
     }
 
     public static PageItem[] pages(string mediaId, string chapterId, uint startIndex, uint count, string payloadJson)
     {
-        return OperationHost.Pages(mediaId, chapterId, startIndex, count, payloadJson);
+        return OperationClient.Pages(mediaId, chapterId, startIndex, count, payloadJson);
+    }
+
+    public static VideoStreamItem[] videoStreams(string mediaId, string payloadJson)
+    {
+        return OperationClient.VideoStreams(mediaId, payloadJson);
+    }
+
+    public static VideoSegmentItem? videoSegment(string mediaId, string streamId, uint sequence, string payloadJson)
+    {
+        return OperationClient.VideoSegment(mediaId, streamId, sequence, payloadJson);
     }
 
     public static OperationResult invoke(OperationRequest request)
     {
-        return OperationHost.Invoke(request);
+        return OperationClient.Invoke(request);
     }
 #endif
 }
