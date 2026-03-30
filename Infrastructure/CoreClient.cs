@@ -99,9 +99,9 @@ internal sealed class CoreClient
         {
             results.Add(new SearchItem(
                 entry.Id,
-                PayloadMapper.SourceId,
+                "emma.video.test",
                 entry.Title,
-                PayloadMapper.MediaTypeVideo,
+                "video",
                 entry.ThumbnailUrl,
                 entry.Description));
         }

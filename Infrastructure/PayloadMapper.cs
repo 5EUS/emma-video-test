@@ -5,8 +5,6 @@ namespace EMMA.PluginTemplate.Infrastructure;
 
 internal static class PayloadMapper
 {
-    public const string SourceId = "";
-    public const string MediaTypePaged = "video";
     public static IReadOnlyList<MangadexSearchEntry> ParseSearchEntries(JsonElement root)
     {
         var data = PluginJsonElement.GetArray(root, "data");
