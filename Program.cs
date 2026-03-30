@@ -94,12 +94,12 @@ public static partial class Program
         return OperationClient.Pages(mediaId, chapterId, startIndex, count, payloadJson);
     }
 
-    public static VideoStreamItem[] videoStreams(string mediaId, string payloadJson)
+    public static VideoStreamOperationItem[] videoStreams(string mediaId, string payloadJson)
     {
         return OperationClient.VideoStreams(mediaId, payloadJson);
     }
 
-    public static VideoSegmentItem? videoSegment(string mediaId, string streamId, uint sequence, string payloadJson)
+    public static VideoSegmentOperationItem? videoSegment(string mediaId, string streamId, uint sequence, string payloadJson)
     {
         return OperationClient.VideoSegment(mediaId, streamId, sequence, payloadJson);
     }
