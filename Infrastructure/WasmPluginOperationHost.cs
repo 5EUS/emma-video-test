@@ -77,72 +77,11 @@ internal sealed class WasmPluginOperationHost
     {
         if (PluginEnvironment.IsDevelopmentMode())
         {
-            Console.WriteLine($"[SEARCH] Called with query='{query}' (empty={string.IsNullOrWhiteSpace(query)})");
+            Console.WriteLine($"[SEARCH] Fixture mode query='{query}'");
         }
 
-        if (string.IsNullOrWhiteSpace(query))
-        {
-            if (PluginEnvironment.IsDevelopmentMode())
-            {
-                Console.WriteLine("[SEARCH] Returning empty results because query is null/whitespace");
-            }
-
-            return [];
-        }
-
-        var totalStopwatch = Stopwatch.StartNew();
-        var fetchMs = 0L;
-        var payloadWasFetched = false;
-
-        if (string.IsNullOrWhiteSpace(payloadJson))
-        {
-            payloadWasFetched = true;
-            var fetchStopwatch = Stopwatch.StartNew();
-            payloadJson = _client.FetchSearchPayload(query) ?? string.Empty;
-            fetchStopwatch.Stop();
-            fetchMs = fetchStopwatch.ElapsedMilliseconds;
-            if (PluginEnvironment.IsDevelopmentMode())
-            {
-                Console.WriteLine($"[SEARCH] Fetched payload in {fetchMs}ms, length={payloadJson.Length}");
-            }
-        }
-
-        if (string.IsNullOrWhiteSpace(payloadJson))
-        {
-            if (PluginEnvironment.IsDevelopmentMode())
-            {
-                Console.WriteLine("[SEARCH] Payload is empty after fetch, returning []");
-            }
-
-            totalStopwatch.Stop();
-            EmitSearchSplitTiming(query, payloadJson, fetchMs, 0, 0, 0, payloadWasFetched, totalStopwatch.ElapsedMilliseconds);
-            return [];
-        }
-
-        if (PluginEnvironment.IsDevelopmentMode())
-        {
-            Console.WriteLine($"[SEARCH] Parsing payload for query='{query}'");
-        }
-
-        var parseMapResult = _client.SearchFromPayloadWithTimings(payloadJson);
-        if (PluginEnvironment.IsDevelopmentMode())
-        {
-            Console.WriteLine($"[SEARCH] Parse completed, got {parseMapResult.Results.Count} results");
-        }
-
-        totalStopwatch.Stop();
-
-        EmitSearchSplitTiming(
-            query,
-            payloadJson,
-            fetchMs,
-            parseMapResult.ParseMs,
-            parseMapResult.MapMs,
-            parseMapResult.Results.Count,
-            payloadWasFetched,
-            totalStopwatch.ElapsedMilliseconds);
-
-        return [.. parseMapResult.Results];
+        var results = _client.SearchFixtures(query);
+        return [.. results];
     }
 
     public ChapterItem[] Chapters(string mediaId, string payloadJson)
@@ -150,6 +89,12 @@ internal sealed class WasmPluginOperationHost
         if (string.IsNullOrWhiteSpace(mediaId))
         {
             return [];
+        }
+
+        var fixtureChapters = _client.GetFixtureChapters(mediaId);
+        if (fixtureChapters.Count > 0)
+        {
+            return [.. fixtureChapters];
         }
 
         payloadJson = ResolvePayload(payloadJson, () => _client.FetchChaptersPayload(mediaId));

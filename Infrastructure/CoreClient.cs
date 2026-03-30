@@ -9,6 +9,14 @@ namespace EMMA.PluginTemplate.Infrastructure;
 /// </summary>
 internal sealed class CoreClient
 {
+    private const string VideoSeriesCollectionId = "video-series-space-odyssey";
+    private const string VideoSeason1Episode1Id = "video-series-space-odyssey-s01e01";
+    private const string VideoSeason1Episode2Id = "video-series-space-odyssey-s01e02";
+    private const string VideoSeason1Episode3Id = "video-series-space-odyssey-s01e03";
+    private const string VideoSeason2Episode1Id = "video-series-space-odyssey-s02e01";
+    private const string VideoSeason2Episode2Id = "video-series-space-odyssey-s02e02";
+    private const string VideoSeason2Episode3Id = "video-series-space-odyssey-s02e03";
+
     private static readonly SearchItem[] Fixtures =
 	[
 		new SearchItem(
@@ -75,6 +83,24 @@ internal sealed class CoreClient
                 item.id.Contains(normalized, StringComparison.OrdinalIgnoreCase)
                 || item.title.Contains(normalized, StringComparison.OrdinalIgnoreCase)
                 || (item.description?.Contains(normalized, StringComparison.OrdinalIgnoreCase) ?? false))];
+    }
+
+    public IReadOnlyList<ChapterItem> GetFixtureChapters(string mediaId)
+    {
+        if (!string.Equals(mediaId, VideoSeriesCollectionId, StringComparison.OrdinalIgnoreCase))
+        {
+            return [];
+        }
+
+        return
+        [
+            new ChapterItem(VideoSeason1Episode1Id, 1, "S1E1 - Lift Off", []),
+            new ChapterItem(VideoSeason1Episode2Id, 2, "S1E2 - First Contact", []),
+            new ChapterItem(VideoSeason1Episode3Id, 3, "S1E3 - Orbitfall", []),
+            new ChapterItem(VideoSeason2Episode1Id, 4, "S2E1 - Signal Lost", []),
+            new ChapterItem(VideoSeason2Episode2Id, 5, "S2E2 - Deep Relay", []),
+            new ChapterItem(VideoSeason2Episode3Id, 6, "S2E3 - Home Vector", []),
+        ];
     }
 
     /// <summary>

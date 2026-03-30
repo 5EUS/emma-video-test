@@ -15,6 +15,16 @@ internal sealed class WasmClient
         return new SearchParseMapResult(parseMap.Results, parseMap.ParseMs, parseMap.MapMs);
     }
 
+    public IReadOnlyList<SearchItem> SearchFixtures(string query)
+    {
+        return Core.SearchFixtures(query);
+    }
+
+    public IReadOnlyList<ChapterItem> GetFixtureChapters(string mediaId)
+    {
+        return Core.GetFixtureChapters(mediaId);
+    }
+
     public IReadOnlyList<ChapterItem> GetChaptersFromPayload(string mediaId, string payloadJson)
     {
         return Core.GetChaptersFromPayload(payloadJson);
