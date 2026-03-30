@@ -1,24 +1,29 @@
 #if PLUGIN_TRANSPORT_WASM
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using EMMA.Plugin.Common;
+using EMMA.PluginTemplate.Infrastructure;
 using LibraryWorld;
 using LibraryWorld.wit.exports.emma.plugin;
 using LibraryWorld.wit.imports.emma.plugin;
 
 namespace LibraryWorld.wit.exports.emma.plugin;
 
-public static partial class PluginImpl
+/// <summary>
+/// WIT export bridge that adapts typed component calls to template program handlers.
+/// </summary>
+public static class PluginImpl
 {
+    private static readonly PluginOperationPayloadRouter InvokePayloadRouter = BuildInvokePayloadRouter();
+
     public static IPlugin.HandshakeResponse Handshake()
     {
-        var handshake = EMMA.TestPlugin.Program.handshake();
+        var handshake = EMMA.PluginTemplate.Program.handshake();
         return new IPlugin.HandshakeResponse(handshake.version, handshake.message);
     }
 
     public static List<IPlugin.Capability> Capabilities()
     {
-        var capabilities = EMMA.TestPlugin.Program.capabilities();
+        var capabilities = EMMA.PluginTemplate.Program.capabilities();
         return [.. capabilities.Select(capability => new IPlugin.Capability(
             capability.name,
             [.. capability.mediaTypes],
@@ -27,8 +32,8 @@ public static partial class PluginImpl
 
     public static List<IPlugin.MediaSearchItem> Search(string query, string payloadJson)
     {
-        payloadJson = ResolvePayload(payloadJson, "search", query);
-        var items = EMMA.TestPlugin.Program.search(query, payloadJson);
+        payloadJson = ResolvePayload(payloadJson, "search", ProviderRequestUrls.BuildSearchAbsoluteUrl(query));
+        var items = EMMA.PluginTemplate.Program.search(query, payloadJson);
 
         return [.. items.Select(item => new IPlugin.MediaSearchItem(
             item.id,
@@ -42,8 +47,8 @@ public static partial class PluginImpl
 
     public static List<IPlugin.ChapterItem> Chapters(string mediaId, string payloadJson)
     {
-        payloadJson = ResolvePayload(payloadJson, "chapters", mediaId);
-        var items = EMMA.TestPlugin.Program.chapters(mediaId, payloadJson);
+        payloadJson = ResolvePayload(payloadJson, "chapters", ProviderRequestUrls.BuildChaptersAbsoluteUrl(mediaId));
+        var items = EMMA.PluginTemplate.Program.chapters(mediaId, payloadJson);
 
         return [.. items.Select(item => new IPlugin.ChapterItem(
             item.id,
@@ -54,14 +59,9 @@ public static partial class PluginImpl
 
     public static IPlugin.PageItem? Page(string mediaId, string chapterId, uint pageIndex, string payloadJson)
     {
-        payloadJson = ResolvePayload(
-            payloadJson,
-            "page",
-            JsonSerializer.Serialize(
-                new PageRequestArgs(mediaId, chapterId, pageIndex),
-                PluginImplJsonContext.Default.PageRequestArgs));
+        payloadJson = ResolvePayload(payloadJson, "page", ProviderRequestUrls.BuildAtHomeAbsoluteUrl(chapterId));
 
-        var page = EMMA.TestPlugin.Program.page(mediaId, chapterId, pageIndex, payloadJson);
+        var page = EMMA.PluginTemplate.Program.page(mediaId, chapterId, pageIndex, payloadJson);
         if (page is null)
         {
             return null;
@@ -72,57 +72,17 @@ public static partial class PluginImpl
 
     public static List<IPlugin.PageItem> Pages(string mediaId, string chapterId, uint startIndex, uint count, string payloadJson)
     {
-        payloadJson = ResolvePayload(
-            payloadJson,
-            "pages",
-            JsonSerializer.Serialize(
-                new PagesRequestArgs(mediaId, chapterId, startIndex, count),
-                PluginImplJsonContext.Default.PagesRequestArgs));
+        payloadJson = ResolvePayload(payloadJson, "pages", ProviderRequestUrls.BuildAtHomeAbsoluteUrl(chapterId));
 
-        var pages = EMMA.TestPlugin.Program.pages(mediaId, chapterId, startIndex, count, payloadJson);
+        var pages = EMMA.PluginTemplate.Program.pages(mediaId, chapterId, startIndex, count, payloadJson);
         return [.. pages.Select(page => new IPlugin.PageItem(page.id, checked((uint)page.index), page.contentUri))];
-    }
-
-    public static List<IPlugin.VideoStreamItem> VideoStreams(string mediaId, string payloadJson)
-    {
-        payloadJson = ResolvePayload(payloadJson, "video-streams", mediaId);
-        var streams = EMMA.TestPlugin.Program.videoStreams(mediaId, payloadJson);
-        return [.. streams.Select(stream => new IPlugin.VideoStreamItem(stream.id, stream.label, stream.playlistUri))];
-    }
-
-    public static IPlugin.VideoSegmentItem? VideoSegment(string mediaId, string streamId, uint sequence, string payloadJson)
-    {
-        payloadJson = ResolvePayload(
-            payloadJson,
-            "video-segment",
-            JsonSerializer.Serialize(
-                new VideoSegmentRequestArgs(mediaId, streamId, sequence),
-                PluginImplJsonContext.Default.VideoSegmentRequestArgs));
-
-        var segment = EMMA.TestPlugin.Program.videoSegment(mediaId, streamId, sequence, payloadJson);
-        if (segment is null)
-        {
-            return null;
-        }
-
-        byte[] payload;
-        try
-        {
-            payload = Convert.FromBase64String(segment.payload);
-        }
-        catch (FormatException)
-        {
-            payload = [];
-        }
-
-        return new IPlugin.VideoSegmentItem(segment.contentType, [.. payload]);
     }
 
     public static IPlugin.MediaOperationResponse Invoke(IPlugin.MediaOperationRequest request)
     {
         var payload = ResolveInvokePayload(request);
 
-        var result = EMMA.TestPlugin.Program.invoke(new OperationRequest(
+        var result = EMMA.PluginTemplate.Program.invoke(new OperationRequest(
             request.operation,
             request.mediaId,
             request.mediaType,
@@ -139,69 +99,63 @@ public static partial class PluginImpl
 
     private static string? ResolveInvokePayload(IPlugin.MediaOperationRequest request)
     {
-        if (!string.IsNullOrWhiteSpace(request.payloadJson))
-        {
-            return request.payloadJson;
-        }
+        var operationRequest = new OperationRequest(
+            request.operation,
+            request.mediaId,
+            request.mediaType,
+            request.argsJson,
+            request.payloadJson);
 
-        var operationName = request.operation ?? string.Empty;
-        return HostBridgeInterop.OperationPayload(operationName, request.argsJson);
+        return InvokePayloadRouter.Resolve(
+            operationRequest,
+            (operation, hint) => HostBridgeInterop.OperationPayload(operation, hint),
+            useArgsJsonFallbackHint: true);
     }
 
-    private static string ResolvePayload(string payloadJson, string operation, string? operationArgs)
+    private static string ResolvePayload(string payloadJson, string operation, string? payloadUrl)
     {
         if (!string.IsNullOrWhiteSpace(payloadJson))
         {
             return payloadJson;
         }
 
-        if (string.IsNullOrWhiteSpace(operationArgs))
+        if (string.IsNullOrWhiteSpace(payloadUrl))
         {
             return string.Empty;
         }
 
-        return HostBridgeInterop.OperationPayload(operation, operationArgs) ?? string.Empty;
+        return HostBridgeInterop.OperationPayload(operation, payloadUrl) ?? string.Empty;
     }
 
     private static WitException<IPlugin.OperationError> CreateOperationError(string? error)
     {
-        var message = string.IsNullOrWhiteSpace(error) ? "operation failed" : error.Trim();
-
-        if (message.StartsWith("unsupported-operation:", StringComparison.OrdinalIgnoreCase))
+        if (!PluginOperationError.TryParse(error, out var parsed))
         {
-            return new WitException<IPlugin.OperationError>(
-                IPlugin.OperationError.UnsupportedOperation(message["unsupported-operation:".Length..]),
-                0);
+            return new WitException<IPlugin.OperationError>(IPlugin.OperationError.Failed("operation failed"), 0);
         }
 
-        if (message.StartsWith("invalid-arguments:", StringComparison.OrdinalIgnoreCase))
+        return parsed.Kind switch
         {
-            return new WitException<IPlugin.OperationError>(
-                IPlugin.OperationError.InvalidArguments(message["invalid-arguments:".Length..]),
-                0);
-        }
-
-        if (message.StartsWith("failed:", StringComparison.OrdinalIgnoreCase))
-        {
-            return new WitException<IPlugin.OperationError>(
-                IPlugin.OperationError.Failed(message["failed:".Length..]),
-                0);
-        }
-
-        return new WitException<IPlugin.OperationError>(IPlugin.OperationError.Failed(message), 0);
+            PluginOperationErrorKind.UnsupportedOperation => new WitException<IPlugin.OperationError>(
+                IPlugin.OperationError.UnsupportedOperation(parsed.Message),
+                0),
+            PluginOperationErrorKind.InvalidArguments => new WitException<IPlugin.OperationError>(
+                IPlugin.OperationError.InvalidArguments(parsed.Message),
+                0),
+            _ => new WitException<IPlugin.OperationError>(
+                IPlugin.OperationError.Failed(parsed.Message),
+                0)
+        };
     }
 
-    private sealed record PageRequestArgs(string mediaId, string chapterId, uint pageIndex);
-
-    private sealed record PagesRequestArgs(string mediaId, string chapterId, uint startIndex, uint count);
-
-    private sealed record VideoSegmentRequestArgs(string mediaId, string streamId, uint sequence);
-
-    [JsonSerializable(typeof(PageRequestArgs))]
-    [JsonSerializable(typeof(PagesRequestArgs))]
-    [JsonSerializable(typeof(VideoSegmentRequestArgs))]
-    private sealed partial class PluginImplJsonContext : JsonSerializerContext
+    private static PluginOperationPayloadRouter BuildInvokePayloadRouter()
     {
+        return new PluginOperationPayloadRouter()
+            .Register("search", request => ProviderRequestUrls.BuildSearchAbsoluteUrl(PluginSearchQuery.Parse(request.argsJson)))
+            .Register("benchmark-network", request => ProviderRequestUrls.BuildSearchAbsoluteUrl(PluginSearchQuery.Parse(request.argsJson)))
+            .Register("chapters", request => ProviderRequestUrls.BuildChaptersAbsoluteUrl(request.ResolveMediaId()))
+            .Register("page", request => ProviderRequestUrls.BuildAtHomeAbsoluteUrl(request.ResolveChapterId()))
+            .Register("pages", request => ProviderRequestUrls.BuildAtHomeAbsoluteUrl(request.ResolveChapterId()));
     }
 }
 #endif

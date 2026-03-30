@@ -1,12 +1,15 @@
 using System.Text.Json;
 
-namespace EMMA.TestPlugin.Infrastructure;
+namespace EMMA.PluginTemplate.Infrastructure;
 
-public static class PluginManifestDefaultsProvider
+/// <summary>
+/// Loads control defaults from plugin manifest with safe fallback values.
+/// </summary>
+public static class ManifestDefaultsProvider
 {
-    public static PluginManifestDefaults Load()
+    public static ManifestDefaults Load()
     {
-        var fallback = new PluginManifestDefaults(
+        var fallback = new ManifestDefaults(
             250,
             512,
             [],
@@ -47,7 +50,7 @@ public static class PluginManifestDefaultsProvider
                 var domains = ReadStringArray(permissions, "domains", fallback.Domains);
                 var paths = ReadStringArray(permissions, "paths", fallback.Paths);
 
-                return new PluginManifestDefaults(cpu, memory, domains, paths);
+                return new ManifestDefaults(cpu, memory, domains, paths);
             }
             catch
             {
@@ -81,7 +84,7 @@ public static class PluginManifestDefaultsProvider
     }
 }
 
-public readonly record struct PluginManifestDefaults(
+public readonly record struct ManifestDefaults(
     int CpuBudgetMs,
     int MemoryMb,
     string[] Domains,
