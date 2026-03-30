@@ -100,27 +100,28 @@ namespace EMMA.PluginTemplate.Infrastructure
         public OperationResult Invoke(OperationRequest request)
         {
             var operation = request.NormalizedOperation();
-            try
+            return operation switch
             {
-                return operation switch
-                {
-                    "search" => BuildOperationJsonResult(JsonSerializer.Serialize(Search(ResolveSearchQuery(request.argsJson), request.payloadJson ?? string.Empty))),
-                    "chapters" => BuildOperationJsonResult(JsonSerializer.Serialize(Chapters(SafeResolveMediaId(request), request.payloadJson ?? string.Empty))),
-                    "page" => BuildOperationJsonResult("null"),
-                    "pages" => BuildOperationJsonResult("[]"),
-                    "video-streams" => BuildOperationJsonResult(JsonSerializer.Serialize(VideoStreams(SafeResolveMediaId(request), request.payloadJson ?? string.Empty))),
-                    "video-segment" => BuildOperationJsonResult(JsonSerializer.Serialize(VideoSegment(
+                "search" => BuildOperationJsonResult(SafeSerialize(
+                    () => Search(ResolveSearchQuery(request.argsJson), request.payloadJson ?? string.Empty),
+                    "[]")),
+                "chapters" => BuildOperationJsonResult(SafeSerialize(
+                    () => Chapters(SafeResolveMediaId(request), request.payloadJson ?? string.Empty),
+                    "[]")),
+                "page" => BuildOperationJsonResult("null"),
+                "pages" => BuildOperationJsonResult("[]"),
+                "video-streams" => BuildOperationJsonResult(SafeSerialize(
+                    () => VideoStreams(SafeResolveMediaId(request), request.payloadJson ?? string.Empty),
+                    "[]")),
+                "video-segment" => BuildOperationJsonResult(SafeSerialize(
+                    () => VideoSegment(
                         SafeResolveMediaId(request),
                         ResolveStreamId(request.argsJson),
                         ResolveSequence(request.argsJson),
-                        request.payloadJson ?? string.Empty))),
-                    _ => OperationResult.UnsupportedOperation(operation),
-                };
-            }
-            catch
-            {
-                return OperationResult.InvalidArguments("invalid operation arguments");
-            }
+                        request.payloadJson ?? string.Empty),
+                    "null")),
+                _ => OperationResult.UnsupportedOperation(operation),
+            };
         }
 
         private static OperationResult BuildOperationJsonResult(string payloadJson)
@@ -159,6 +160,18 @@ namespace EMMA.PluginTemplate.Infrastructure
         private static uint ResolveSequence(string? argsJson)
         {
             return PluginJsonArgs.GetUInt32(argsJson, "sequence") ?? 0;
+        }
+
+        private static string SafeSerialize<T>(Func<T> serializeTargetFactory, string fallbackJson)
+        {
+            try
+            {
+                return JsonSerializer.Serialize(serializeTargetFactory());
+            }
+            catch
+            {
+                return fallbackJson;
+            }
         }
 
         private string SerializePageForCli(string[] args, string inputPayload)
