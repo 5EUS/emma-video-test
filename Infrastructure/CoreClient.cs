@@ -101,7 +101,7 @@ internal sealed class CoreClient
                 entry.Id,
                 PayloadMapper.SourceId,
                 entry.Title,
-                PayloadMapper.MediaTypePaged,
+                PayloadMapper.MediaTypeVideo,
                 entry.ThumbnailUrl,
                 entry.Description));
         }
