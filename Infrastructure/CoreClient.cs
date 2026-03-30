@@ -81,11 +81,12 @@ internal sealed class CoreClient
             return SearchFixturesCatalog;
         }
 
-        var matches = [.. SearchFixturesCatalog
+        var matches = SearchFixturesCatalog
             .Where(item =>
                 item.id.Contains(normalized, StringComparison.OrdinalIgnoreCase)
                 || item.title.Contains(normalized, StringComparison.OrdinalIgnoreCase)
-                || (item.description?.Contains(normalized, StringComparison.OrdinalIgnoreCase) ?? false))];
+                || (item.description?.Contains(normalized, StringComparison.OrdinalIgnoreCase) ?? false))
+            .ToList();
 
         return matches.Count > 0 ? matches : SearchFixturesCatalog;
     }
