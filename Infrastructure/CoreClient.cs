@@ -81,29 +81,36 @@ internal sealed class CoreClient
             return SearchFixturesCatalog;
         }
 
-        return [.. SearchFixturesCatalog
+        var matches = [.. SearchFixturesCatalog
             .Where(item =>
                 item.id.Contains(normalized, StringComparison.OrdinalIgnoreCase)
                 || item.title.Contains(normalized, StringComparison.OrdinalIgnoreCase)
                 || (item.description?.Contains(normalized, StringComparison.OrdinalIgnoreCase) ?? false))];
+
+        return matches.Count > 0 ? matches : SearchFixturesCatalog;
     }
 
     public IReadOnlyList<ChapterItem> GetFixtureChapters(string mediaId)
     {
-        if (!string.Equals(mediaId, VideoSeriesCollectionId, StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(mediaId, VideoSeriesCollectionId, StringComparison.OrdinalIgnoreCase))
         {
-            return [];
+            return
+            [
+                new ChapterItem(VideoSeason1Episode1Id, 1, "S1E1 - Lift Off", []),
+                new ChapterItem(VideoSeason1Episode2Id, 2, "S1E2 - First Contact", []),
+                new ChapterItem(VideoSeason1Episode3Id, 3, "S1E3 - Orbitfall", []),
+                new ChapterItem(VideoSeason2Episode1Id, 4, "S2E1 - Signal Lost", []),
+                new ChapterItem(VideoSeason2Episode2Id, 5, "S2E2 - Deep Relay", []),
+                new ChapterItem(VideoSeason2Episode3Id, 6, "S2E3 - Home Vector", []),
+            ];
         }
 
-        return
-        [
-            new ChapterItem(VideoSeason1Episode1Id, 1, "S1E1 - Lift Off", []),
-            new ChapterItem(VideoSeason1Episode2Id, 2, "S1E2 - First Contact", []),
-            new ChapterItem(VideoSeason1Episode3Id, 3, "S1E3 - Orbitfall", []),
-            new ChapterItem(VideoSeason2Episode1Id, 4, "S2E1 - Signal Lost", []),
-            new ChapterItem(VideoSeason2Episode2Id, 5, "S2E2 - Deep Relay", []),
-            new ChapterItem(VideoSeason2Episode3Id, 6, "S2E3 - Home Vector", []),
-        ];
+        if (GetFixtureStreams(mediaId).Count > 0)
+        {
+            return [new ChapterItem(mediaId, 1, "Episode 1", [])];
+        }
+
+        return [];
     }
 
     public IReadOnlyList<StreamFixture> GetFixtureStreams(string mediaId)
@@ -158,7 +165,11 @@ internal sealed class CoreClient
             ["video-local-file"] = string.IsNullOrWhiteSpace(localFileUri)
                 ? []
                 : [new StreamFixture("local-file-main", "Local File", localFileUri)],
-            [VideoSeriesCollectionId] = [],
+            [VideoSeriesCollectionId] =
+            [
+                new StreamFixture("series-main-1080p", "1080p", multi1080Uri),
+                new StreamFixture("series-main-720p", "720p", multi720Uri),
+            ],
         };
     }
 
