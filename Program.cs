@@ -1,112 +1,115 @@
 #if PLUGIN_TRANSPORT_ASPNET
 using EMMA.Plugin.Common;
 using EMMA.Plugin.AspNetCore;
-using EMMA.PluginTemplate.Infrastructure;
-using EMMA.PluginTemplate.Services;
+using EMMA.VideoTest.Infrastructure;
+using EMMA.VideoTest.Services;
+using Microsoft.Extensions.DependencyInjection;
 #else
 using EMMA.Plugin.Common;
-using EMMA.PluginTemplate.Infrastructure;
+using EMMA.VideoTest.Infrastructure;
 #endif
 
-namespace EMMA.PluginTemplate;
+namespace EMMA.VideoTest;
 
-/// <summary>
-/// Transport entrypoint: wires AspNet host services or WASM operation host.
-/// </summary>
 public static partial class Program
 {
 #if PLUGIN_TRANSPORT_ASPNET
+    private static readonly ManifestDefaults ControlDefaults = ManifestDefaultsProvider.Load();
+
     public static void Main(string[] args)
     {
         var devMode = PluginEnvironment.IsDevelopmentMode();
         var hostOptions = new PluginAspNetHostOptions(
             DefaultPort: PluginEnvironment.GetPort(args, 5000),
             PortEnvironmentVariables: devMode
-                ? ["EMMA_PLUGIN_PORT", "EMMA_PLUGIN_TEMPLATE_PORT"]
+                ? ["EMMA_PLUGIN_PORT", "EMMA_TEST_PLUGIN_PORT"]
                 : ["EMMA_PLUGIN_PORT"],
             PortArgumentName: devMode ? "--port" : string.Empty,
-            RootMessage: "EMMA plugin template is running.");
+            RootMessage: "EMMA test plugin is running.");
 
         PluginBuilder.Create(args, hostOptions)
+            .ConfigureServices(services =>
+            {
+                services.AddHttpClient<AspNetClient>(client =>
+                {
+                    client.BaseAddress = ProviderHttpProfile.BaseUri;
+                    client.DefaultRequestHeaders.UserAgent.ParseAdd(ProviderHttpProfile.UserAgent);
+                    client.DefaultRequestHeaders.Accept.ParseAdd(ProviderHttpProfile.AcceptMediaType);
+                });
+            })
             .UseDefaultControlService(ConfigureDefaultControlService)
                 .AddDefaultPagedProviders<AspNetClient>()
                 .AddDefaultVideoProvider<AspNetClient>()
             .Run(mapDefaultEndpoints: devMode);
     }
 
-    /// <summary>
-    /// Applies manifest-driven control defaults exposed to the host.
-    /// </summary>
     private static void ConfigureDefaultControlService(PluginSdkControlOptions options)
     {
-        options.Message = "EMMA Video Test ready";
-        options.CpuBudgetMs = 200;
-        options.MemoryMb = 256;
-        options.Capabilities.Add("plugin-template");
+        options.Message = "EMMA test plugin ready";
+        options.CpuBudgetMs = ControlDefaults.CpuBudgetMs;
+        options.MemoryMb = ControlDefaults.MemoryMb;
+        options.Capabilities.Add("test-plugin");
         options.Capabilities.Add("search");
         options.Capabilities.Add("pages");
         options.Capabilities.Add("video");
 
         options.Domains.Clear();
-        options.Domains.Add("commondatastorage.googleapis.com");
+        foreach (var domain in ControlDefaults.Domains)
+        {
+            options.Domains.Add(domain);
+        }
+
         options.Paths.Clear();
-        options.Paths.Add("/");
+        foreach (var path in ControlDefaults.Paths)
+        {
+            options.Paths.Add(path);
+        }
     }
 
 #else
-    private static readonly WasmClient OperationClient = new();
+    private static readonly WasmPluginOperationHost OperationHost = new();
 
     public static void Main(string[] args)
     {
         Environment.ExitCode = PluginWasmCliHost.Run(
             args,
             PluginOperationNames.WasmCliKnownOperations,
-            OperationClient.ExecuteOperationForCli);
+            OperationHost.ExecuteOperationForCli);
     }
 
     public static HandshakeResponse handshake()
     {
-        return OperationClient.Handshake();
+        return OperationHost.Handshake();
     }
 
     public static CapabilityItem[] capabilities()
     {
-        return OperationClient.Capabilities();
+        return OperationHost.Capabilities();
     }
 
     public static SearchItem[] search(string query, string payloadJson)
     {
-        return OperationClient.Search(query, payloadJson);
+        return OperationHost.Search(query, payloadJson);
     }
 
     public static ChapterItem[] chapters(string mediaId, string payloadJson)
     {
-        return OperationClient.Chapters(mediaId, payloadJson);
+        return OperationHost.Chapters(mediaId, payloadJson);
     }
 
     public static PageItem? page(string mediaId, string chapterId, uint pageIndex, string payloadJson)
     {
-        return OperationClient.Page(mediaId, chapterId, pageIndex, payloadJson);
+        return OperationHost.Page(mediaId, chapterId, pageIndex, payloadJson);
     }
 
     public static PageItem[] pages(string mediaId, string chapterId, uint startIndex, uint count, string payloadJson)
     {
-        return OperationClient.Pages(mediaId, chapterId, startIndex, count, payloadJson);
-    }
-
-    public static VideoStreamOperationItem[] videoStreams(string mediaId, string payloadJson)
-    {
-        return OperationClient.VideoStreams(mediaId, payloadJson);
-    }
-
-    public static VideoSegmentOperationItem? videoSegment(string mediaId, string streamId, uint sequence, string payloadJson)
-    {
-        return OperationClient.VideoSegment(mediaId, streamId, sequence, payloadJson);
+        return OperationHost.Pages(mediaId, chapterId, startIndex, count, payloadJson);
     }
 
     public static OperationResult invoke(OperationRequest request)
     {
-        return OperationClient.Invoke(request);
+        return OperationHost.Invoke(request);
     }
 #endif
 }

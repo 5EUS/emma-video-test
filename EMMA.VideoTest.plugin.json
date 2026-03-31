@@ -112,7 +112,9 @@
     "memoryMb": 512
   },
   "permissions": {
-    "domains": [],
+    "domains": [
+      "download.samplelib.com"
+    ],
     "paths": []
   }
 }

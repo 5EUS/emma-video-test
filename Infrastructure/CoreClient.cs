@@ -1,7 +1,7 @@
 using System.Text;
 using EMMA.Plugin.Common;
 
-namespace EMMA.PluginTemplate.Infrastructure;
+namespace EMMA.VideoTest.Infrastructure;
 
 /// <summary>
 /// Fixture-backed core data source used by both ASP.NET and WASM transports.
@@ -138,11 +138,11 @@ internal sealed class CoreClient
 
     private static IReadOnlyDictionary<string, IReadOnlyList<StreamFixture>> BuildStreamsByMediaId()
     {
-        var singleUri = GetEnvOrDefault("EMMA_VIDEO_TEST_HLS_SINGLE_URI", "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4");
-        var multi1080Uri = GetEnvOrDefault("EMMA_VIDEO_TEST_HLS_1080_URI", "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4");
-        var multi720Uri = GetEnvOrDefault("EMMA_VIDEO_TEST_HLS_720_URI", "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4");
-        var multi480Uri = GetEnvOrDefault("EMMA_VIDEO_TEST_HLS_480_URI", "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4");
-        var segmentUri = GetEnvOrDefault("EMMA_VIDEO_TEST_SEGMENT_URI", "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4");
+        var singleUri = GetEnvOrDefault("EMMA_VIDEO_TEST_HLS_SINGLE_URI", "https://download.samplelib.com/mp4/sample-5s.mp4");
+        var multi1080Uri = GetEnvOrDefault("EMMA_VIDEO_TEST_HLS_1080_URI", "https://download.samplelib.com/mp4/sample-5s.mp4");
+        var multi720Uri = GetEnvOrDefault("EMMA_VIDEO_TEST_HLS_720_URI", "https://download.samplelib.com/mp4/sample-5s.mp4");
+        var multi480Uri = GetEnvOrDefault("EMMA_VIDEO_TEST_HLS_480_URI", "https://download.samplelib.com/mp4/sample-5s.mp4");
+        var segmentUri = GetEnvOrDefault("EMMA_VIDEO_TEST_SEGMENT_URI", "https://download.samplelib.com/mp4/sample-5s.mp4");
         var localFileUri = ResolveLocalFileUri(Environment.GetEnvironmentVariable("EMMA_VIDEO_TEST_LOCAL_FILE_PATH"));
 
         return new Dictionary<string, IReadOnlyList<StreamFixture>>(StringComparer.OrdinalIgnoreCase)

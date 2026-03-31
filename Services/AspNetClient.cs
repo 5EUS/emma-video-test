@@ -2,10 +2,10 @@ using Google.Protobuf;
 using EMMA.Plugin.Common;
 using EMMA.Plugin.AspNetCore;
 using EMMA.Contracts.Plugins;
-using EMMA.PluginTemplate.Infrastructure;
+using EMMA.VideoTest.Infrastructure;
 using Microsoft.Extensions.Logging;
 
-namespace EMMA.PluginTemplate.Services;
+namespace EMMA.VideoTest.Services;
 
 /// <summary>
 /// Deterministic fixture runtime for search/chapter/video validation.
