@@ -22,10 +22,9 @@ public sealed class AspNetClient(ILogger<AspNetClient> logger)
         cancellationToken.ThrowIfCancellationRequested();
 
         var fixtures = Core.SearchFixtures(query);
-        var results = new List<MediaSummary>(fixtures.Count);
-        foreach (var item in fixtures)
-        {
-            results.Add(new MediaSummary
+        var results = PluginTypedExportScaffold.MapList(
+            fixtures,
+            item => new MediaSummary
             {
                 Id = item.id,
                 Source = item.source,
@@ -34,7 +33,6 @@ public sealed class AspNetClient(ILogger<AspNetClient> logger)
                 ThumbnailUrl = item.thumbnailUrl ?? string.Empty,
                 Description = item.description ?? string.Empty,
             });
-        }
 
         _logger.LogInformation("Video fixture search query={Query} results={Count}", query, results.Count);
         return Task.FromResult<IReadOnlyList<MediaSummary>>(results);
@@ -45,16 +43,14 @@ public sealed class AspNetClient(ILogger<AspNetClient> logger)
         cancellationToken.ThrowIfCancellationRequested();
 
         var chapters = Core.GetFixtureChapters(mediaId);
-        var results = new List<MediaChapter>(chapters.Count);
-        foreach (var chapter in chapters)
-        {
-            results.Add(new MediaChapter
+        var results = PluginTypedExportScaffold.MapList(
+            chapters,
+            chapter => new MediaChapter
             {
                 Id = chapter.id,
                 Number = chapter.number,
                 Title = chapter.title,
             });
-        }
 
         return Task.FromResult<IReadOnlyList<MediaChapter>>(results);
     }

@@ -14,7 +14,14 @@ namespace EMMA.VideoTest;
 public static partial class Program
 {
 #if PLUGIN_TRANSPORT_ASPNET
-    private static readonly ManifestDefaults ControlDefaults = ManifestDefaultsProvider.Load();
+    private static readonly PluginManifestDefaults ControlDefaults = PluginManifestDefaultsProvider.Load(
+        pluginManifestFileName: "EMMA.VideoTest.plugin.json",
+        fallback: new PluginManifestDefaults(
+            250,
+            512,
+            ["download.samplelib.com"],
+            []),
+        pluginProjectFolderName: "EMMA.VideoTest");
 
     public static void Main(string[] args)
     {
@@ -32,9 +39,9 @@ public static partial class Program
             {
                 services.AddHttpClient<AspNetClient>(client =>
                 {
-                    client.BaseAddress = ProviderHttpProfile.BaseUri;
-                    client.DefaultRequestHeaders.UserAgent.ParseAdd(ProviderHttpProfile.UserAgent);
-                    client.DefaultRequestHeaders.Accept.ParseAdd(ProviderHttpProfile.AcceptMediaType);
+                    client.BaseAddress = ProviderHttpProfile.Defaults.BaseUri;
+                    client.DefaultRequestHeaders.UserAgent.ParseAdd(ProviderHttpProfile.Defaults.UserAgent);
+                    client.DefaultRequestHeaders.Accept.ParseAdd(ProviderHttpProfile.Defaults.AcceptMediaType);
                 });
             })
             .UseDefaultControlService(ConfigureDefaultControlService)
