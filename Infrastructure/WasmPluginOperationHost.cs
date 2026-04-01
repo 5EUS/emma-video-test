@@ -257,7 +257,30 @@ internal sealed class WasmPluginOperationHost
         return PluginWasmVideoOperationScaffold.InvokeVideoStreams(
             request,
             mediaId => _core.GetFixtureStreams(mediaId)
-                .Select(stream => new WasmVideoStreamOperationItem(stream.Id, stream.Label, stream.PlaylistUri))
+                .Select(stream => new WasmVideoStreamOperationItem(
+                    stream.Id,
+                    stream.Label,
+                    stream.PlaylistUri,
+                    stream.RequestHeaders,
+                    stream.RequestCookies,
+                    stream.StreamType,
+                    stream.IsLive,
+                    stream.DrmProtected,
+                    stream.DrmScheme,
+                    stream.AudioTracks?.Select(track => new WasmVideoTrackOperationItem(
+                        track.Id,
+                        track.Label,
+                        track.Language,
+                        track.Codec,
+                        track.IsDefault)).ToArray(),
+                    stream.SubtitleTracks?.Select(track => new WasmVideoTrackOperationItem(
+                        track.Id,
+                        track.Label,
+                        track.Language,
+                        track.Codec,
+                        track.IsDefault)).ToArray(),
+                    stream.DefaultAudioTrackId,
+                    stream.DefaultSubtitleTrackId))
                 .ToArray(),
             WasmJsonContext.Default.WasmVideoStreamOperationItemArray);
     }

@@ -5,7 +5,7 @@ namespace EMMA.VideoTest.Infrastructure;
 internal static class ProviderHttpProfile
 {
     public static readonly PluginProviderHttpProfile Defaults = new(
-        BaseUri: new Uri("https://download.samplelib.com"),
+        BaseUri: new Uri("https://test-streams.mux.dev"),
         UserAgent: "EMMA-VideoTest/1.0",
         AcceptMediaType: "application/json");
 }

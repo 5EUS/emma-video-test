@@ -19,7 +19,7 @@ public static partial class Program
         fallback: new PluginManifestDefaults(
             250,
             512,
-            ["download.samplelib.com"],
+            ["test-streams.mux.dev", "samplelib.com", "dash.akamaized.net"],
             []),
         pluginProjectFolderName: "EMMA.VideoTest");
 

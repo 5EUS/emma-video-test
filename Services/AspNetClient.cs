@@ -84,7 +84,50 @@ public sealed class AspNetClient(ILogger<AspNetClient> logger)
                 Id = stream.Id,
                 Label = stream.Label,
                 PlaylistUri = stream.PlaylistUri,
+                StreamType = stream.StreamType,
+                IsLive = stream.IsLive,
+                DrmProtected = stream.DrmProtected,
+                DrmScheme = stream.DrmScheme ?? string.Empty,
+                RequestCookies = stream.RequestCookies ?? string.Empty,
+                DefaultAudioTrackId = stream.DefaultAudioTrackId ?? string.Empty,
+                DefaultSubtitleTrackId = stream.DefaultSubtitleTrackId ?? string.Empty,
             }));
+
+            foreach (var grpcStream in response.Streams)
+            {
+                var source = streams.First(item => string.Equals(item.Id, grpcStream.Id, StringComparison.Ordinal));
+                if (source.RequestHeaders is not null)
+                {
+                    foreach (var header in source.RequestHeaders)
+                    {
+                        grpcStream.RequestHeaders[header.Key] = header.Value;
+                    }
+                }
+
+                if (source.AudioTracks is not null)
+                {
+                    grpcStream.AudioTracks.AddRange(source.AudioTracks.Select(track => new MediaTrack
+                    {
+                        Id = track.Id,
+                        Label = track.Label,
+                        Language = track.Language ?? string.Empty,
+                        Codec = track.Codec ?? string.Empty,
+                        IsDefault = track.IsDefault,
+                    }));
+                }
+
+                if (source.SubtitleTracks is not null)
+                {
+                    grpcStream.SubtitleTracks.AddRange(source.SubtitleTracks.Select(track => new MediaTrack
+                    {
+                        Id = track.Id,
+                        Label = track.Label,
+                        Language = track.Language ?? string.Empty,
+                        Codec = track.Codec ?? string.Empty,
+                        IsDefault = track.IsDefault,
+                    }));
+                }
+            }
         }
 
         _logger.LogInformation("Video fixture streams mediaId={MediaId} count={Count}", mediaId, response.Streams.Count);

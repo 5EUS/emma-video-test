@@ -113,7 +113,9 @@
   },
   "permissions": {
     "domains": [
-      "download.samplelib.com"
+      "test-streams.mux.dev",
+      "samplelib.com",
+      "dash.akamaized.net"
     ],
     "paths": []
   }

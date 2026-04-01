@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Text;
 using EMMA.Plugin.Common;
 
@@ -16,7 +17,27 @@ internal sealed class CoreClient
     private const string VideoSeason2Episode2Id = "video-series-space-odyssey-s02e02";
     private const string VideoSeason2Episode3Id = "video-series-space-odyssey-s02e03";
 
-    public readonly record struct StreamFixture(string Id, string Label, string PlaylistUri);
+    public readonly record struct TrackFixture(
+        string Id,
+        string Label,
+        string? Language,
+        string? Codec,
+        bool IsDefault);
+
+    public readonly record struct StreamFixture(
+        string Id,
+        string Label,
+        string PlaylistUri,
+        string StreamType,
+        bool IsLive,
+        bool DrmProtected,
+        string? DrmScheme,
+        IReadOnlyDictionary<string, string>? RequestHeaders,
+        string? RequestCookies,
+        IReadOnlyList<TrackFixture>? AudioTracks,
+        IReadOnlyList<TrackFixture>? SubtitleTracks,
+        string? DefaultAudioTrackId,
+        string? DefaultSubtitleTrackId);
 
     public readonly record struct SegmentFixture(string ContentType, byte[] Payload);
 
@@ -50,6 +71,13 @@ internal sealed class CoreClient
 			mediaType: "video",
 			thumbnailUrl: "https://example.invalid/posters/video-hls-multi.jpg",
 			description: "Scenario B: multiple stream variants for selection."),
+        new SearchItem(
+            id: "video-dash-single",
+            source: "emma.video.test",
+            title: "Video Test - DASH Single Stream",
+            mediaType: "video",
+            thumbnailUrl: "https://example.invalid/posters/video-dash-single.jpg",
+            description: "Scenario F: MPEG-DASH stream fixture."),
 		new SearchItem(
 			id: "video-segment-basic",
 			source: "emma.video.test",
@@ -138,38 +166,82 @@ internal sealed class CoreClient
 
     private static IReadOnlyDictionary<string, IReadOnlyList<StreamFixture>> BuildStreamsByMediaId()
     {
-        var singleUri = GetEnvOrDefault("EMMA_VIDEO_TEST_HLS_SINGLE_URI", "https://download.samplelib.com/mp4/sample-5s.mp4");
-        var multi1080Uri = GetEnvOrDefault("EMMA_VIDEO_TEST_HLS_1080_URI", "https://download.samplelib.com/mp4/sample-5s.mp4");
-        var multi720Uri = GetEnvOrDefault("EMMA_VIDEO_TEST_HLS_720_URI", "https://download.samplelib.com/mp4/sample-5s.mp4");
-        var multi480Uri = GetEnvOrDefault("EMMA_VIDEO_TEST_HLS_480_URI", "https://download.samplelib.com/mp4/sample-5s.mp4");
-        var segmentUri = GetEnvOrDefault("EMMA_VIDEO_TEST_SEGMENT_URI", "https://download.samplelib.com/mp4/sample-5s.mp4");
+        var singleUri = GetEnvOrDefault("EMMA_VIDEO_TEST_HLS_SINGLE_URI", "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8");
+        var multi1080Uri = GetEnvOrDefault("EMMA_VIDEO_TEST_HLS_1080_URI", "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8");
+        var multi720Uri = GetEnvOrDefault("EMMA_VIDEO_TEST_HLS_720_URI", "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8");
+        var multi480Uri = GetEnvOrDefault("EMMA_VIDEO_TEST_HLS_480_URI", "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8");
+        var dashUri = GetEnvOrDefault("EMMA_VIDEO_TEST_DASH_SINGLE_URI", "https://dash.akamaized.net/envivio/EnvivioDash3/manifest.mpd");
+        var segmentUri = GetEnvOrDefault("EMMA_VIDEO_TEST_SEGMENT_URI", "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8");
         var localFileUri = ResolveLocalFileUri(Environment.GetEnvironmentVariable("EMMA_VIDEO_TEST_LOCAL_FILE_PATH"));
+
+        var audioTracks = new List<TrackFixture>
+        {
+            new("audio-en", "English", "en", "aac", true),
+            new("audio-ja", "Japanese", "ja", "aac", false)
+        };
+        var subtitleTracks = new List<TrackFixture>
+        {
+            new("sub-en", "English CC", "en", "webvtt", true)
+        };
+
+        StreamFixture Hls(string id, string label, string uri)
+            => new(
+                id,
+                label,
+                uri,
+                "hls",
+                false,
+                false,
+                null,
+                null,
+                null,
+                audioTracks,
+                subtitleTracks,
+                "audio-en",
+                "sub-en");
+
+        StreamFixture Dash(string id, string label, string uri)
+            => new(
+                id,
+                label,
+                uri,
+                "dash",
+                false,
+                false,
+                null,
+                null,
+                null,
+                audioTracks,
+                subtitleTracks,
+                "audio-en",
+                "sub-en");
 
         return new Dictionary<string, IReadOnlyList<StreamFixture>>(StringComparer.OrdinalIgnoreCase)
         {
-            ["video-hls-single"] = [new StreamFixture("single-main", "Main", singleUri)],
-            ["video-movie-nightfall"] = [new StreamFixture("movie-main", "Movie", singleUri)],
+            ["video-hls-single"] = [Hls("single-main", "Main", singleUri)],
+            ["video-movie-nightfall"] = [Hls("movie-main", "Movie", singleUri)],
             ["video-hls-multi"] =
             [
-                new StreamFixture("multi-1080p", "1080p", multi1080Uri),
-                new StreamFixture("multi-720p", "720p", multi720Uri),
-                new StreamFixture("multi-480p", "480p", multi480Uri),
+                Hls("multi-1080p", "1080p", multi1080Uri),
+                Hls("multi-720p", "720p", multi720Uri),
+                Hls("multi-480p", "480p", multi480Uri),
             ],
-            ["video-segment-basic"] = [new StreamFixture("segment-main", "Segment Main", segmentUri)],
-            [VideoSeason1Episode1Id] = [new StreamFixture("s1e1-main", "1080p", singleUri)],
-            [VideoSeason1Episode2Id] = [new StreamFixture("s1e2-main", "1080p", multi1080Uri)],
-            [VideoSeason1Episode3Id] = [new StreamFixture("s1e3-main", "720p", multi720Uri)],
-            [VideoSeason2Episode1Id] = [new StreamFixture("s2e1-main", "1080p", multi1080Uri)],
-            [VideoSeason2Episode2Id] = [new StreamFixture("s2e2-main", "720p", multi720Uri)],
-            [VideoSeason2Episode3Id] = [new StreamFixture("s2e3-main", "480p", multi480Uri)],
+            ["video-dash-single"] = [Dash("dash-main", "Main", dashUri)],
+            ["video-segment-basic"] = [Hls("segment-main", "Segment Main", segmentUri)],
+            [VideoSeason1Episode1Id] = [Hls("s1e1-main", "1080p", singleUri)],
+            [VideoSeason1Episode2Id] = [Hls("s1e2-main", "1080p", multi1080Uri)],
+            [VideoSeason1Episode3Id] = [Hls("s1e3-main", "720p", multi720Uri)],
+            [VideoSeason2Episode1Id] = [Hls("s2e1-main", "1080p", multi1080Uri)],
+            [VideoSeason2Episode2Id] = [Hls("s2e2-main", "720p", multi720Uri)],
+            [VideoSeason2Episode3Id] = [Hls("s2e3-main", "480p", multi480Uri)],
             ["video-empty-streams"] = [],
             ["video-local-file"] = string.IsNullOrWhiteSpace(localFileUri)
                 ? []
-                : [new StreamFixture("local-file-main", "Local File", localFileUri)],
+                : [new StreamFixture("local-file-main", "Local File", localFileUri, "direct", false, false, null, null, null, null, null, null, null)],
             [VideoSeriesCollectionId] =
             [
-                new StreamFixture("series-main-1080p", "1080p", multi1080Uri),
-                new StreamFixture("series-main-720p", "720p", multi720Uri),
+                Hls("series-main-1080p", "1080p", multi1080Uri),
+                Hls("series-main-720p", "720p", multi720Uri),
             ],
         };
     }
