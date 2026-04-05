@@ -34,17 +34,47 @@ if [[ -z "$SIGNING_REPOSITORY_ID" ]]; then
 fi
 
 KEY_MATERIAL=""
+decode_private_key_material() {
+  local value="$1"
+  local decoded
+
+  if [[ "$value" == *"BEGIN"*"PRIVATE KEY"* ]]; then
+    printf '%s' "$value"
+    return 0
+  fi
+
+  local normalized="${value//\\n/$'\n'}"
+  if [[ "$normalized" == *"BEGIN"*"PRIVATE KEY"* ]]; then
+    printf '%s' "$normalized"
+    return 0
+  fi
+
+  if decoded="$(printf '%s' "$value" | base64 --decode 2>/dev/null)" \
+    && [[ "$decoded" == *"BEGIN"*"PRIVATE KEY"* ]]; then
+    printf '%s' "$decoded"
+    return 0
+  fi
+
+  if decoded="$(printf '%s' "$value" | openssl base64 -d -A 2>/dev/null)" \
+    && [[ "$decoded" == *"BEGIN"*"PRIVATE KEY"* ]]; then
+    printf '%s' "$decoded"
+    return 0
+  fi
+
+  return 1
+}
+
 if [[ -n "${EMMA_PLUGIN_SIGNING_PRIVATE_KEY_PEM:-}" ]]; then
-  KEY_MATERIAL="${EMMA_PLUGIN_SIGNING_PRIVATE_KEY_PEM}"
+  KEY_MATERIAL="$(decode_private_key_material "${EMMA_PLUGIN_SIGNING_PRIVATE_KEY_PEM}")"
 elif [[ -n "${EMMA_PLUGIN_SIGNING_PRIVATE_KEY_BASE64:-}" ]]; then
-  KEY_MATERIAL="$(printf '%s' "${EMMA_PLUGIN_SIGNING_PRIVATE_KEY_BASE64}" | base64 --decode)"
+  KEY_MATERIAL="$(decode_private_key_material "${EMMA_PLUGIN_SIGNING_PRIVATE_KEY_BASE64}")"
 elif [[ -n "${EMMA_HMAC_KEY_BASE64:-}" ]]; then
-  KEY_MATERIAL="$(printf '%s' "${EMMA_HMAC_KEY_BASE64}" | base64 --decode)"
+  KEY_MATERIAL="$(decode_private_key_material "${EMMA_HMAC_KEY_BASE64}")"
 fi
 
 if [[ -z "$KEY_MATERIAL" ]]; then
   echo "Set EMMA_PLUGIN_SIGNING_PRIVATE_KEY_PEM or EMMA_PLUGIN_SIGNING_PRIVATE_KEY_BASE64." >&2
-  echo "For unchanged CI workflows, EMMA_HMAC_KEY_BASE64 may contain the base64 PEM private key." >&2
+  echo "For unchanged CI workflows, EMMA_HMAC_KEY_BASE64 may contain either base64 PEM or raw PEM private key content." >&2
   exit 1
 fi
 
