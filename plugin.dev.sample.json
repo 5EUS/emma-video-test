@@ -1,0 +1,55 @@
+{
+  "defaultProfile": "wasm-dev",
+  "profiles": {
+    "wasm-dev": {
+      "runtimeTarget": "Wasm",
+      "executionMode": "Direct",
+      "wasiSdkPath": "~/Git/wasi-sdk",
+      "logging": {
+        "plugin": true,
+        "aspNetHost": false,
+        "httpClient": false
+      },
+      "watchGlobs": [
+        "Program.cs",
+        "Infrastructure/**/*.cs",
+        "Services/**/*.cs",
+        "EMMA.VideoTest.plugin.json",
+        "wit/**/*.wit",
+        "artifacts/build-wasm/**/*.wasm"
+      ]
+    },
+    "linux-dev": {
+      "runtimeTarget": "Linux",
+      "executionMode": "Direct",
+      "logging": {
+        "plugin": true,
+        "aspNetHost": false,
+        "httpClient": false
+      },
+      "watchGlobs": [
+        "Program.cs",
+        "Infrastructure/**/*.cs",
+        "Services/**/*.cs",
+        "EMMA.VideoTest.plugin.json",
+        "artifacts/build-linux-x64/**"
+      ]
+    },
+    "windows-dev": {
+      "runtimeTarget": "Windows",
+      "executionMode": "Direct",
+      "logging": {
+        "plugin": true,
+        "aspNetHost": false,
+        "httpClient": false
+      },
+      "watchGlobs": [
+        "Program.cs",
+        "Infrastructure/**/*.cs",
+        "Services/**/*.cs",
+        "EMMA.VideoTest.plugin.json",
+        "artifacts/build-win-x64/**"
+      ]
+    }
+  }
+}

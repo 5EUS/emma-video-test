@@ -1,0 +1,3 @@
+<Project>
+  <Import Project="obj/EMMA.PluginDev.props" Condition="Exists('obj/EMMA.PluginDev.props')" />
+</Project>

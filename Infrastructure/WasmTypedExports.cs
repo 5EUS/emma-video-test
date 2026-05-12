@@ -94,21 +94,28 @@ public static class PluginImpl
 
     public static IPlugin.MediaOperationResponse Invoke(IPlugin.MediaOperationRequest request)
     {
-        var payload = ResolveInvokePayload(request);
+        return PluginTypedExportScaffold.InvokeWithOperationErrorHandling(
+            () =>
+            {
+                var payload = ResolveInvokePayload(request);
 
-        var result = EMMA.VideoTest.Program.invoke(new OperationRequest(
-            request.operation,
-            request.mediaId,
-            request.mediaType,
-            request.argsJson,
-            payload));
+                var result = EMMA.VideoTest.Program.invoke(new OperationRequest(
+                    request.operation,
+                    request.mediaId,
+                    request.mediaType,
+                    request.argsJson,
+                    payload));
 
-        if (result.isError)
-        {
-            throw CreateOperationError(result.error);
-        }
+                if (result.isError)
+                {
+                    throw CreateOperationError(result.error);
+                }
 
-        return new IPlugin.MediaOperationResponse(result.contentType, result.payloadJson);
+                return new IPlugin.MediaOperationResponse(result.contentType, result.payloadJson);
+            },
+            static message => new WitException<IPlugin.OperationError>(
+                IPlugin.OperationError.Failed(message),
+                0));
     }
 
     public static List<IPlugin.VideoStreamItem> VideoStreams(string mediaId, string payloadJson)
