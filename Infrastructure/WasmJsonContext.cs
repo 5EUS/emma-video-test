@@ -10,12 +10,15 @@ namespace EMMA.VideoTest.Infrastructure;
 [JsonSerializable(typeof(IReadOnlyDictionary<string, string>))]
 [JsonSerializable(typeof(HandshakeResponse))]
 [JsonSerializable(typeof(CapabilityItem[]))]
+[JsonSerializable(typeof(VideoTrackOperationItem))]
+[JsonSerializable(typeof(VideoTrackOperationItem[]))]
+[JsonSerializable(typeof(List<VideoTrackOperationItem>))]
+[JsonSerializable(typeof(IReadOnlyList<VideoTrackOperationItem>))]
+[JsonSerializable(typeof(VideoStreamOperationItem[]))]
+[JsonSerializable(typeof(VideoSegmentOperationItem))]
 [JsonSerializable(typeof(SearchItem[]))]
 [JsonSerializable(typeof(ChapterItem[]))]
 [JsonSerializable(typeof(WasmChapterOperationItem[]))]
-[JsonSerializable(typeof(WasmVideoStreamOperationItem[]))]
-[JsonSerializable(typeof(WasmVideoTrackOperationItem[]))]
-[JsonSerializable(typeof(WasmVideoSegmentOperationItem))]
 [JsonSerializable(typeof(PageItem))]
 [JsonSerializable(typeof(PageItem[]))]
 [JsonSerializable(typeof(OperationResult))]
@@ -30,30 +33,4 @@ internal sealed record WasmChapterOperationItem(
     int number,
     string title,
     string[] uploaderGroups);
-
-internal sealed record WasmVideoStreamOperationItem(
-    string id,
-    string label,
-    string playlistUri,
-    IReadOnlyDictionary<string, string>? requestHeaders = null,
-    string? requestCookies = null,
-    string? streamType = null,
-    bool isLive = false,
-    bool drmProtected = false,
-    string? drmScheme = null,
-    WasmVideoTrackOperationItem[]? audioTracks = null,
-    WasmVideoTrackOperationItem[]? subtitleTracks = null,
-    string? defaultAudioTrackId = null,
-    string? defaultSubtitleTrackId = null);
-
-internal sealed record WasmVideoTrackOperationItem(
-    string id,
-    string label,
-    string? language = null,
-    string? codec = null,
-    bool isDefault = false);
-
-internal sealed record WasmVideoSegmentOperationItem(
-    string contentType,
-    string payload);
 #endif
